@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>For My Capybara</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Dancing+Script:wght@700&family=Courier+Prime&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-color: #5d4037;
+            --accent-color: #ff6b81;
+            --slot-bg: rgba(255, 255, 255, 0.5);
+            --paper-color: #f4e1c1;
+            --ink-color: #3e2723;
+        }
+
+        body {
+            background-image: var(--bg-gradient);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: 'Fredoka One', cursive;
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Start content from top */
+            justify-content: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto; 
+            user-select: none;
+            padding-top: 50px;
+            padding-bottom: 140px; 
+        }
+
+        .bg-hearts {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; z-index: -1; pointer-events: none;
+        }
+        
+        /* Floating Emojis */
+        .bg-heart {
+            position: absolute; bottom: -50px; font-size: 24px;
+            /* Adjust opacity so the seals look subtle */
+            opacity: 0.6; 
+            animation: floatUp 10s linear infinite;
+        }
+
+        /* --- GAME UI --- */
+        #game-wrapper {
+            display: flex; flex-direction: column; align-items: center;
+            width: 95%; max-width: 900px; z-index: 10;
+            transition: opacity 0.8s ease;
+            margin-top: 10px; 
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive; 
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 3px 3px 0px rgba(255, 107, 129, 0.4);
+            margin: 0 0 10px 0;
+            letter-spacing: 2px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .top-decoration {
+            width: 100px; height: 100px; object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+            margin-bottom: 5px;
+        }
+
+        #boards-container {
+            display: flex; gap: 15px; margin-bottom: 20px;
+            flex-wrap: wrap; justify-content: center; align-items: flex-start;
+            padding-top: 60px; /* Space for capy head sitting on grid */
+            min-height: 300px; 
+        }
+
+        /* --- GRID BOX STYLES --- */
+        .grid-box {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 6px; padding: 10px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 2px solid var(--glass-border); border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        /* Active/Enlarged Grid */
+        .grid-box.active-focus {
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(3, 80px);
+            gap: 12px; padding: 20px;
+            z-index: 20;
+            transform: scale(1.05);
+            border-color: white;
+            box-shadow: 0 15px 40px rgba(255, 107, 129, 0.3);
+        }
+        .grid-box.active-focus .grid-label { top: -35px; font-size: 1.5rem; }
+        .grid-box.active-focus .slot { font-size: 40px; }
+
+        .grid-label {
+            position: absolute; top: -25px; left: 0; width: 100%;
+            text-align: center; color: #fff; font-size: 1.2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        /* --- SITTING CAPYBARA --- */
+        .capy-sitter {
+            position: absolute;
+            z-index: 30;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.2));
+            transform: rotate(-10deg);
+            pointer-events: none;
+            transition: all 0.4s ease;
+        }
+        /* Capy Size when Grid is BIG */
+        .grid-box.active-focus .capy-sitter { width: 100px; top: -90px; left: -25px; }
+        /* Capy Size when Grid is SMALL */
+        .grid-box:not(.active-focus) .capy-sitter { width: 70px; top: -60px; left: -15px; }
+
+
+        .slot {
+            background-color: var(--slot-bg);
+            border-radius: 12px; display: flex; justify-content: center; align-items: center;
+            font-size: 24px; color: var(--accent-color); cursor: pointer;
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .slot:active { transform: scale(0.9); }
+        .slot.filled {
+            background-color: white; color: var(--accent-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .slot.hint::before {
+            content: attr(data-hint); position: absolute;
+            font-size: inherit; color: rgba(255, 255, 255, 0.5);
+            pointer-events: none; animation: pulseHint 2s infinite;
+        }
+        .slot.filled::before { content: none; }
+        .slot.locked-row {
+            background-color: rgba(0,0,0,0.1); cursor: not-allowed;
+            border: 2px dashed rgba(255,255,255,0.3);
+        }
+        .slot.reveal-anim {
+            background-color: #ff6b81 !important; color: white !important;
+            transform: scale(1.1); box-shadow: 0 0 20px rgba(255, 107, 129, 0.6);
+        }
+
+        #hand-container {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            display: flex; gap: 8px; padding: 15px 10px;
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(10px);
+            border-radius: 20px 20px 0 0;
+            flex-wrap: wrap; justify-content: center;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .tile {
+            width: 45px; height: 45px; background-color: white; color: var(--text-color);
+            border-radius: 10px; display: flex; justify-content: center; align-items: center;
+            font-size: 24px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+            transition: transform 0.2s, background 0.2s;
+            border: 1px solid #eee;
+        }
+        .tile:hover { transform: translateY(-2px); }
+        .tile.selected {
+            background-color: var(--accent-color); color: white;
+            transform: translateY(-6px); box-shadow: 0 6px 15px rgba(255, 107, 129, 0.4);
+        }
+        .tile.used { opacity: 0.3; pointer-events: none; transform: scale(0.9); background: #ddd;}
+
+        /* --- VINTAGE SECTIONS --- */
+        #question-section, #letter-section {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 200;
+            flex-direction: column;
+            justify-content: flex-start; 
+            align-items: center;
+            animation: fadeIn 1s ease;
+            overflow-y: auto; 
+            padding-top: 40px; 
+            padding-bottom: 80px; 
+        }
+        .vintage-paper {
+            width: 85%; max-width: 500px; background-color: var(--paper-color);
+            background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png');
+            padding: 40px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            transform: rotate(-2deg); position: relative; text-align: center; color: var(--ink-color);
+            margin: 20px 0; 
+        }
+        .vintage-paper::before {
+            content: ""; position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            width: 120px; height: 35px; background: rgba(255,255,255,0.4);
+            border-left: 2px dashed rgba(0,0,0,0.1); border-right: 2px dashed rgba(0,0,0,0.1);
+        }
+        h2.typewriter {
+            font-family: 'Courier Prime', monospace; font-size: 24px; margin-bottom: 20px;
+            border-bottom: 2px solid var(--ink-color); display: inline-block; padding-bottom: 5px;
+        }
+        .answer-area { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .ans-box {
+            width: 50px; height: 50px; border-bottom: 3px solid var(--ink-color);
+            font-family: 'Courier Prime', monospace; font-size: 32px; font-weight: bold;
+            display: flex; justify-content: center; align-items: flex-end; cursor: pointer;
+        }
+        .vintage-btn {
+            background: transparent; border: 2px solid var(--ink-color); color: var(--ink-color);
+            font-family: 'Courier Prime', monospace; font-size: 16px; font-weight: bold;
+            padding: 10px 25px; cursor: pointer; margin-top: 15px; transition: 0.3s;
+        }
+        .vintage-btn:hover { background: var(--ink-color); color: var(--paper-color); }
+
+        .photo-frame {
+            background: white; padding: 10px; padding-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); transform: rotate(3deg);
+            margin: 0 auto 20px auto; max-width: 200px;
+        }
+        .vhs-img { 
+            width: 100%; height: auto; 
+            filter: sepia(0.3) contrast(1.1) brightness(0.95); 
+            display: block; 
+        }
+        
+        #letter-text {
+            font-family: 'Courier Prime', monospace; font-size: 14px;
+            line-height: 1.5; text-align: left; margin-top: 20px;
+        }
+        
+        /* Paragraph spacing for the letter */
+        #letter-text p { margin-bottom: 15px; }
+
+        /* --- FIXED MODAL Z-INDEX TO 300 --- */
+        #modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; 
+            z-index: 300; 
+            flex-direction: column; backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 20px;
+            text-align: center; animation: bounceIn 0.5s; width: 80%; max-width: 300px;
+        }
+        .sad-gif { width: 100%; max-width: 180px; border-radius: 10px; margin-bottom: 15px; }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2.5rem; }
+            #game-wrapper { width: 100%; }
+
+            /* Mobile Active Size */
+            .grid-box.active-focus {
+                grid-template-columns: repeat(3, 60px);
+                grid-template-rows: repeat(3, 60px);
+            }
+            .grid-box.active-focus .slot { font-size: 30px; }
+
+            /* Mobile Inactive Size */
+            .grid-box:not(.active-focus) {
+                grid-template-columns: repeat(3, 35px);
+                grid-template-rows: repeat(3, 35px);
+            }
+            .grid-box:not(.active-focus) .slot { font-size: 18px; }
+
+            .grid-box.active-focus .capy-sitter { width: 80px; top: -70px; left: -10px; }
+            .grid-box:not(.active-focus) .capy-sitter { width: 50px; top: -45px; left: -10px; }
+
+            .tile { width: 40px; height: 40px; font-size: 20px; }
+            #boards-container { gap: 10px; }
+        }
+
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes floatUp { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 0.8; } 100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; } }
+        @keyframes popIn { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes bounceIn { 0% { transform: scale(0.8); opacity: 0; } 60% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pulseHint { 0% { opacity: 0.3; } 50% { opacity: 0.7; } 100% { opacity: 0.3; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="bg-hearts" id="bg-hearts"></div>
+
+    <div id="game-wrapper">
+        <img src="https://png.pngtree.com/png-vector/20240322/ourmid/pngtree-capybara-photograph-as-a-funny-way-to-illustrate-nature-photographer-png-image_12192166.png" class="top-decoration" alt="Cute Capybara">
+        
+        <h1 id="level-title">Level 1</h1>
+        <p id="level-desc" style="color: #fff; margin-bottom: 10px; font-size: 16px; text-align: center;">Fill the grids to proceed!</p>
+
+        <div id="boards-container">
+            <div class="grid-box" id="grid-0">
+                 </div>
+
+            <div class="grid-box" id="grid-1" style="display: none;"><div class="grid-label">2</div></div>
+            <div class="grid-box" id="grid-2" style="display: none;"><div class="grid-label">3</div></div>
+        </div>
+
+        <div id="hand-container"></div>
+    </div>
+
+    <div id="modal-overlay">
+        <div class="modal-content" id="success-content">
+            <h2 style="color: #ff6b81; font-family: 'Dancing Script', cursive; font-size: 36px; margin: 0;">Amazing!</h2>
+            <p>You're doing great, love!</p>
+            <button class="vintage-btn" id="next-level-btn" style="border-radius: 50px; background: #ff6b81; color: white; border: none; font-family: 'Fredoka One';">Next Level</button>
+        </div>
+        
+        <div class="modal-content" id="error-content" style="display:none;" onclick="closeModal()">
+            <img src="https://i.pinimg.com/originals/70/6b/ba/706bba1e5ac0b2d257044f8e6298c066.gif" class="sad-gif" alt="Sad">
+            <h2 style="color: #5d4037; margin: 0; font-size: 24px;">bebe naman :((</h2>
+            <p style="font-size: 12px; color: #999;">(Tap to try again)</p>
+        </div>
+    </div>
+
+    <div id="question-section">
+        <div class="vintage-paper">
+            <h2 class="typewriter">Will you be my Valentine?</h2>
+            
+            <div class="answer-area">
+                <div class="ans-box" id="ans-0" onclick="removeAnswer(0)"></div>
+                <div class="ans-box" id="ans-1" onclick="removeAnswer(1)"></div>
+                <div class="ans-box" id="ans-2" onclick="removeAnswer(2)"></div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <button class="vintage-btn" style="margin: 5px;" onclick="placeAnswer('Y')">Y</button>
+                <button class="vintage-btn" style="margin: 5px;" onclick="placeAnswer('E')">E</button>
+                <button class="vintage-btn" style="margin: 5px;" onclick="placeAnswer('S')">S</button>
+                <button class="vintage-btn" style="margin: 5px;" onclick="placeAnswer('N')">N</button>
+                <button class="vintage-btn" style="margin: 5px;" onclick="placeAnswer('O')">O</button>
+            </div>
+
+            <button class="vintage-btn" onclick="checkAnswer()" style="background: var(--ink-color); color: var(--paper-color);">Confirm</button>
+        </div>
+    </div>
+
+    <div id="letter-section">
+        <div class="vintage-paper" style="transform: rotate(1deg);">
+            <div class="photo-frame">
+                <img src="https://i.imgur.com/BaiLEtY.jpeg" class="vhs-img" alt="Us">
+            </div>
+            
+            <h2 class="typewriter" style="font-size: 20px; border: none;">Dearest Valentine,</h2>
+            
+            <div id="letter-text">
+                <p>I'm sorry natagalan baby, but I hope you'll still say yes.</p>
+                
+                <p>Naglisod kog find ug way na mag hatag ug handmade na gift because nahilanat ko. Gusto ko naman mag gawa jud for you, pero maglisod jud kog find ug place and time kay sa balay, mahadlok jud ko ma sakpan and wala koy place. Pero I've been trying man because dili jud siya excuse to pabaya you.</p>
+                
+                <p>Pero karon baby, naglisod jud ko kay nagkasakit ko and dili pajud ta magkita this week. And the time na nagkita ta I didn't even feel well so yeah. I'm sorry di na nako ni i proofread pero I hope gets ra nimo.</p>
+
+                <p>To my baby, here is my long overdue na "asking you out" to be my valentines. To be fair, I really wanted to ask you out to be my valentines man jud pero it's kind of dickish of me to plano nata.</p>
+
+                <p>Anyway, I hope ma okay na atong little fight. I love you very much. You'll always have my heart.</p>
+
+                <div style="margin-left: 10px; font-style: italic; font-size: 13px; line-height: 1.6; border-left: 2px solid #3e2723; padding-left: 10px;">
+                    I'd Love you in every single universe,<br>
+                    My hands just know yours too well<br>
+                    I've memorized your touch in every inch of your skin<br>
+                    in every life we'd find each other again and again<br>
+                    if you were a flower, i'd be a bee<br>
+                    if i was a fish you'd be the salt in the sea.<br>
+                    On the beach I see you, in every grain of sand.<br>
+                    the beach that extends for miles, that i'll walk for days<br>
+                    I'd study the shore to love you, in all sorts of ways.<br>
+                    I'd count every grain of sand for you, if that's what you wanted<br>
+                    and if u were a ghost, i'd pray my house was haunted.<br>
+                </div>
+                
+                <br>
+                <p style="text-align: center; font-weight: bold;">You are my favorite person, my capybara, and my love.<br>Happy Valentine's Day!</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+    function createHearts() {
+        const container = document.getElementById('bg-hearts');
+        for (let i = 0; i < 15; i++) {
+            const heart = document.createElement('div');
+            heart.classList.add('bg-heart'); 
+            heart.innerHTML = '🦭'; // SEAL BACKGROUND
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.animationDuration = (Math.random() * 5 + 5) + 's';
+            heart.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            heart.style.animationDelay = Math.random() * 5 + 's';
+            container.appendChild(heart);
+        }
+    }
+    createHearts();
+
+    // --- GAME LOGIC ---
+    const LVL1_WORDS = ["CAT", "DOG", "MOM"];
+    const LVL2_GRID1 = ["LUV", "BEB"]; 
+    const LVL2_GRID2 = ["HUN", "WIN"];
+    const LVL2_GRID3 = ["TIN", "YES"];
+
+    let currentLevel = 1;
+    let hand = [];
+    let selectedTileId = null;
+    let gridState = [[], [], []];
+    
+    // Elements
+    const gridEls = [document.getElementById('grid-0'), document.getElementById('grid-1'), document.getElementById('grid-2')];
+    const handContainer = document.getElementById('hand-container');
+    const modal = document.getElementById('modal-overlay');
+    const successContent = document.getElementById('success-content');
+    const errorContent = document.getElementById('error-content');
+
+    function initGrids() {
+        gridEls.forEach((el, gridIdx) => {
+            el.innerHTML = ''; 
+
+            if (gridIdx === 0) {
+                let img = document.createElement('img');
+                img.src = "https://png.pngtree.com/png-vector/20240322/ourmid/pngtree-capybara-photograph-as-a-funny-way-to-illustrate-nature-photographer-png-image_12192166.png";
+                img.className = "capy-sitter";
+                img.alt = "Sitting Capybara";
+                el.appendChild(img);
+            }
+
+            let label = document.createElement('div');
+            label.className = 'grid-label';
+            label.innerText = currentLevel === 2 ? "" : (gridIdx + 1); 
+            el.appendChild(label);
+
+            for(let i=0; i<9; i++){
+                let slot = document.createElement('div');
+                slot.classList.add('slot');
+                slot.id = `g${gridIdx}-s${i}`;
+
+                if (currentLevel === 2) {
+                    if (i === 0) { 
+                        let word = (gridIdx === 0) ? LVL2_GRID1[0] : (gridIdx === 1) ? LVL2_GRID2[0] : LVL2_GRID3[0];
+                        slot.classList.add('hint'); slot.setAttribute('data-hint', word[0]); 
+                    }
+                    if (i === 3) { 
+                        let word = (gridIdx === 0) ? LVL2_GRID1[1] : (gridIdx === 1) ? LVL2_GRID2[1] : LVL2_GRID3[1];
+                        slot.classList.add('hint'); slot.setAttribute('data-hint', word[0]);
+                    }
+                    if (i >= 6) {
+                        slot.classList.add('locked-row'); slot.textContent = "?"; 
+                    }
+                }
+                
+                if (!(currentLevel === 2 && i >= 6)) {
+                    slot.onclick = () => handleSlotClick(gridIdx, i);
+                }
+                el.appendChild(slot);
+            }
+        });
+    }
+
+    function startLevel(lvl) {
+        currentLevel = lvl;
+        modal.style.display = 'none';
+        selectedTileId = null;
+        gridState = [new Array(9).fill(null), new Array(9).fill(null), new Array(9).fill(null)];
+
+        initGrids();
+
+        if(lvl === 1) {
+            document.getElementById('level-title').textContent = "Level 1";
+            document.getElementById('level-desc').textContent = "Fill: CAT, DOG, MOM";
+            gridEls[0].style.display = "grid";
+            gridEls[1].style.display = "none";
+            gridEls[2].style.display = "none";
+            // Lvl 1: Grid 0 is always big
+            gridEls[0].classList.add('active-focus');
+            setupHand([...LVL1_WORDS].join('').split(''));
+        } 
+        else {
+            document.getElementById('level-title').textContent = "Level 2";
+            document.getElementById('level-desc').textContent = "Fill the rows starting with the faint letters!";
+            gridEls[0].style.display = "grid";
+            gridEls[1].style.display = "grid";
+            gridEls[2].style.display = "grid";
+            // Lvl 2: Grid 0 starts big
+            gridEls[0].classList.add('active-focus');
+            gridEls[1].classList.remove('active-focus');
+            gridEls[2].classList.remove('active-focus');
+            
+            const allChars = [...LVL2_GRID1, ...LVL2_GRID2, ...LVL2_GRID3].join('').split('');
+            setupHand(allChars);
+        }
+    }
+
+    function updateGridFocus() {
+        if (currentLevel !== 2) return;
+
+        // Check completion of top 6 slots (indices 0-5)
+        const g0Done = checkGridPartiallyFull(0);
+        const g1Done = checkGridPartiallyFull(1);
+        const g2Done = checkGridPartiallyFull(2);
+
+        // Reset classes
+        gridEls.forEach(el => el.classList.remove('active-focus'));
+
+        if (!g0Done) {
+            gridEls[0].classList.add('active-focus');
+        } else if (!g1Done) {
+            gridEls[1].classList.add('active-focus');
+        } else if (!g2Done) {
+            gridEls[2].classList.add('active-focus');
+        }
+        // If all done, none are focused (all small), ready for reveal
+    }
+
+    function checkGridPartiallyFull(idx) {
+        for(let i=0; i<6; i++) {
+            if(gridState[idx][i] === null) return false;
+        }
+        return true;
+    }
+
+    function setupHand(chars) {
+        chars.sort(() => Math.random() - 0.5);
+        hand = chars.map((c, index) => ({ char: c, used: false, id: index }));
+        renderHand();
+    }
+
+    function selectTile(id) {
+        const tile = hand.find(t => t.id === id);
+        if (tile.used) return;
+        selectedTileId = (selectedTileId === id) ? null : id;
+        renderHand();
+    }
+
+    function handleSlotClick(gridIdx, slotIdx) {
+        if (currentLevel === 2 && slotIdx >= 6) return; 
+        
+        const currentData = gridState[gridIdx][slotIdx];
+
+        if (currentData !== null) { // Remove
+            const tile = hand.find(t => t.id === currentData.tileId);
+            if(tile) tile.used = false;
+            gridState[gridIdx][slotIdx] = null;
+            const slot = document.getElementById(`g${gridIdx}-s${slotIdx}`);
+            slot.textContent = ""; slot.classList.remove('filled');
+            renderHand();
+            updateGridFocus(); 
+            return;
+        }
+
+        if (selectedTileId !== null) { // Place
+            const tile = hand.find(t => t.id === selectedTileId);
+            gridState[gridIdx][slotIdx] = { char: tile.char, tileId: tile.id };
+            tile.used = true;
+            const slot = document.getElementById(`g${gridIdx}-s${slotIdx}`);
+            slot.textContent = tile.char; slot.classList.add('filled');
+            selectedTileId = null;
+            renderHand();
+            updateGridFocus(); 
+            checkWin();
+        }
+    }
+
+    function renderHand() {
+        handContainer.innerHTML = '';
+        hand.forEach(tile => {
+            let div = document.createElement('div');
+            div.className = 'tile'; div.textContent = tile.char;
+            if (tile.used) div.classList.add('used');
+            if (tile.id === selectedTileId) div.classList.add('selected');
+            div.onclick = () => selectTile(tile.id);
+            handContainer.appendChild(div);
+        });
+    }
+
+    function checkWin() {
+        if (currentLevel === 1) {
+            if (gridState[0].every(s => s !== null)) {
+                setTimeout(() => showSuccess("Level 1 Complete!", () => startLevel(2)), 500);
+            }
+        } else {
+            if (checkGridPartiallyFull(0) && checkGridPartiallyFull(1) && checkGridPartiallyFull(2)) {
+                setTimeout(revealSecret, 1000);
+            }
+        }
+    }
+
+    function showSuccess(msg, callback) {
+        successContent.style.display = 'block';
+        errorContent.style.display = 'none';
+        document.querySelector('#success-content h2').textContent = "Good Job!";
+        document.querySelector('#next-level-btn').onclick = callback;
+        modal.style.display = 'flex';
+    }
+
+    function revealSecret() {
+        handContainer.style.opacity = 0;
+        const reveals = [
+            { g:0, c:['V','A','L'] }, { g:1, c:['E','N','T'] }, { g:2, c:['I','N','E'] }
+        ];
+        let delay = 0;
+        reveals.forEach(item => {
+            item.c.forEach((char, i) => {
+                setTimeout(() => {
+                    let slot = document.getElementById(`g${item.g}-s${6+i}`);
+                    slot.classList.remove('locked-row');
+                    slot.textContent = char; slot.classList.add('reveal-anim');
+                }, delay);
+                delay += 300;
+            });
+        });
+        setTimeout(() => {
+            document.getElementById('game-wrapper').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('game-wrapper').style.display = 'none';
+                document.getElementById('question-section').style.display = 'flex';
+            }, 1000);
+        }, delay + 2000);
+    }
+
+    let answer = [null, null, null];
+    function placeAnswer(char) {
+        let emptyIdx = answer.indexOf(null);
+        if (emptyIdx !== -1) { answer[emptyIdx] = char; document.getElementById(`ans-${emptyIdx}`).innerText = char; }
+    }
+    function removeAnswer(idx) { answer[idx] = null; document.getElementById(`ans-${idx}`).innerText = ""; }
+
+    function checkAnswer() {
+        let text = answer.join("");
+        // Standardize answer check
+        if (text === "YES") {
+            document.getElementById('question-section').style.display = 'none';
+            document.getElementById('letter-section').style.display = 'flex';
+        } else if (text === "NO" || text === "N O") {
+            // SHOW ERROR MODAL
+            successContent.style.display = 'none'; 
+            errorContent.style.display = 'block'; 
+            modal.style.display = 'flex';
+        } else { 
+            alert("Please spell YES or NO"); 
+        }
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        // If closing the error modal, reset answers
+        if (errorContent.style.display === 'block') {
+            answer = [null, null, null];
+            [0,1,2].forEach(i => document.getElementById(`ans-${i}`).innerText = "");
+        }
+    }
+
+    startLevel(1);
+</script>
+</body>
+</html>

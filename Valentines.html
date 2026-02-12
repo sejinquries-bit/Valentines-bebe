@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Courier+Prime&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #fce4ec;
+            --envelope-color: #ff80ab;
+            --flap-color: #ff4081;
+            --paper-color: #ffffff;
+            --heart-color: #d50000;
+            --parchment: #f4ecd8;
+            --ink: #4a3b32;
+            --wax-red: #a83232;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-color);
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Brush Script MT', cursive;
+            transition: background 1s ease;
+        }
+
+        /* --- PART 1: ENVELOPE STYLES --- */
+        .envelope-wrapper {
+            position: relative;
+            background: var(--envelope-color);
+            width: 300px;
+            height: 200px;
+            margin-top: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .envelope-wrapper.open {
+            transform: translateY(90px);
+        }
+
+        .envelope-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            z-index: 10;
+            border-top: 110px solid var(--flap-color);
+            border-right: 150px solid transparent;
+            border-left: 150px solid transparent;
+            transform-origin: top;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .envelope-wrapper::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            z-index: 5;
+            border-top: 100px solid transparent;
+            border-right: 150px solid #f8bbd0;
+            border-bottom: 100px solid #f8bbd0;
+            border-left: 150px solid #ff80ab;
+            pointer-events: none;
+        }
+
+        .letter {
+            position: absolute;
+            right: 20px;
+            bottom: 0;
+            width: 260px;
+            height: 180px;
+            background: var(--paper-color);
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+            box-shadow: 0 0 5px rgba(0,0,0,0.15);
+            z-index: 1;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            display: block;
+            pointer-events: none; /* Disable clicks when closed */
+        }
+
+        .letter-content {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .letter p { font-size: 1.2rem; color: #444; margin-bottom: 5px; margin-top: 0;}
+        .letter .heart { font-size: 1.5rem; color: var(--heart-color); margin-bottom: 10px; animation: beat 1s infinite; }
+
+        .ask-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 10px;
+            position: relative;
+            width: 100%;
+            height: 40px;
+        }
+
+        .btn-ask {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            z-index: 20; 
+        }
+
+        .btn-yes-small { background: #ff4081; color: white; transition: transform 0.2s; }
+        .btn-yes-small:hover { transform: scale(1.1); background: #f50057; }
+
+        .btn-no-small {
+            background: #ddd; color: #555;
+            position: absolute; right: 60px;
+            transition: all 0.3s ease-out;
+        }
+
+        .envelope-wrapper.open::before { transform: rotateX(180deg); z-index: 0; }
+        .envelope-wrapper.open .letter { 
+            bottom: 100px; 
+            transform: translateY(-40px); 
+            z-index: 6; 
+            pointer-events: auto; 
+            transition-delay: 0.2s;
+        }
+
+        @keyframes beat { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* --- PART 2: VINTAGE RECTANGULAR LETTER --- */
+        #vintage-container {
+            display: none;
+            position: relative;
+            width: 100%; height: 100%;
+            justify-content: center; align-items: center;
+        }
+
+        .vintage-paper {
+            width: 350px; 
+            min-height: 500px;
+            background-color: var(--parchment);
+            background-image: repeating-linear-gradient(var(--parchment) 0px, var(--parchment) 24px, #e4dccc 25px);
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 60px rgba(139, 69, 19, 0.15);
+            position: relative; 
+            opacity: 0;
+            animation: unfoldPaper 1.5s forwards ease-in-out;
+            border-radius: 5px; /* Rectangular with slight rounded corners */
+            transform: rotate(0deg);
+        }
+
+        @keyframes unfoldPaper { 
+            0% { opacity: 0; transform: scale(0.5) rotate(-5deg); } 
+            100% { opacity: 1; transform: scale(1) rotate(0deg); } 
+        }
+
+        .polaroid {
+            background: white; 
+            padding: 10px 10px 30px 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+            transform: rotate(3deg);
+            width: 180px; 
+            margin: 0 auto 20px auto; 
+            border: 1px solid #ddd;
+        }
+
+        .photo-placeholder {
+            width: 100%; height: 160px;
+            background-image: url('https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=200'); 
+            background-size: cover; background-position: center; filter: sepia(0.4);
+        }
+
+        .vintage-text { color: var(--ink); font-family: 'Dancing Script', cursive; font-size: 1.4rem; line-height: 1.6; }
+        .date-stamp { font-family: 'Courier Prime', monospace; font-size: 0.8rem; color: #888; text-align: right; border-bottom: 1px dashed #bbb; padding-bottom: 5px; margin-bottom: 20px; }
+        .wax-seal { position: absolute; bottom: 30px; right: 30px; width: 50px; height: 50px; background: var(--wax-red); border-radius: 50%; box-shadow: 2px 2px 4px rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; color: rgba(0,0,0,0.3); font-size: 1.5rem; font-weight: bold; border: 2px dashed rgba(0,0,0,0.2); }
+        
+        .bg-hearts { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
+        .bg-heart { position: absolute; font-size: 20px; color: rgba(255, 64, 129, 0.2); animation: float 6s linear infinite; }
+        @keyframes float { 0% { transform: translateY(110vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <div id="part1">
+        <div class="bg-hearts">
+            <div class="bg-heart" style="left: 10%; animation-duration: 8s;">❤</div>
+            <div class="bg-heart" style="left: 70%; animation-duration: 7s;">❤</div>
+        </div>
+
+        <div class="envelope-wrapper" onclick="toggleEnvelope()">
+            <div class="letter">
+                <div class="letter-content">
+                    <p>Will you be my Valentine?</p>
+                    <div class="heart">♥</div>
+                </div>
+                
+                <div class="ask-buttons">
+                    <button class="btn-ask btn-yes-small" onclick="sayYes(event)">Yes</button>
+                    <button class="btn-ask btn-no-small" id="noBtn" onmouseover="moveNoButton(event)" onclick="moveNoButton(event)">No</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="vintage-container" style="display: none;">
+        <div class="vintage-paper">
+            <div class="date-stamp">February 14, 2026</div>
+            <div class="polaroid">
+                <div class="photo-placeholder"></div>
+                <div style="text-align: center; margin-top: 5px; font-family: 'Courier Prime'; font-size: 0.7rem;">Us together</div>
+            </div>
+            <div class="vintage-text">
+                <p>My Dearest,</p>
+                <p>I knew you wouldn't click No. I am so happy to spend this day with you.</p>
+                <p style="margin-top: 30px;">Love always,</p>
+                <p>[Your Name]</p>
+            </div>
+            <div class="wax-seal">❤</div>
+        </div>
+    </div>
+
+    <script>
+        function toggleEnvelope() {
+            const envelope = document.querySelector('.envelope-wrapper');
+            envelope.classList.toggle('open');
+            
+            // Reset No button position if closed
+            if (!envelope.classList.contains('open')) {
+                const btn = document.getElementById('noBtn');
+                btn.style.left = '';
+                btn.style.top = '';
+                btn.style.right = '60px'; 
+            }
+        }
+
+        function sayYes(event) {
+            event.stopPropagation();
+            const part1 = document.getElementById('part1');
+            part1.style.opacity = '0';
+            document.body.style.background = '#2c1e1a';
+            setTimeout(() => {
+                part1.style.display = 'none';
+                document.getElementById('vintage-container').style.display = 'flex';
+            }, 500);
+        }
+
+        function moveNoButton(event) {
+            // Prevent move if envelope is closed
+            const envelope = document.querySelector('.envelope-wrapper');
+            if (!envelope.classList.contains('open')) return;
+
+            event.stopPropagation(); 
+            
+            const btn = document.getElementById('noBtn');
+            const container = document.querySelector('.letter');
+            const containerRect = container.getBoundingClientRect();
+            const btnRect = btn.getBoundingClientRect();
+            
+            // Constrain movement to the letter area
+            const maxX = containerRect.width - btnRect.width - 20; 
+            const maxY = containerRect.height - btnRect.height - 20;
+
+            const newX = Math.random() * maxX;
+            const newY = Math.random() * maxY;
+
+            btn.style.left = newX + 'px';
+            btn.style.top = newY + 'px';
+            btn.style.right = 'auto'; 
+        }
+    </script>
+</body>
+</html>
